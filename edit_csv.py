@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+import pandas as pda
 
 pd.set_option('display.max_rows', 266)
 pd.set_option('display.max_columns', 50)
