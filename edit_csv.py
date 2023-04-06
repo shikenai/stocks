@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pda
+import pandas as pd
 
 pd.set_option('display.max_rows', 266)
 pd.set_option('display.max_columns', 50)
@@ -11,13 +11,14 @@ def edit(df, df_date, brand_code):
     df_merged = pd.concat([df_extracted, df_date], axis=1)
     df_merged.columns = ['Close', 'High', 'Low', 'Open', 'Volume', 'Date']
 
-    gd_df = golden_cross(df_merged)
-    macd_df = set_macd(gd_df)
+    # gd_df = golden_cross(df_merged)
+    macd_df = add_macd(df_merged)
 
     print(macd_df)
 
 
 def golden_cross(df):
+    # ゴールデンクロス関係の処理
     ma_short = df["Close"].rolling(window=5).mean()
     ma_long = df["Close"].rolling(window=20).mean()
     df = pd.concat([df, ma_short.rename('MA_short'), ma_long.rename('MA_long')], axis=1)
@@ -27,30 +28,25 @@ def golden_cross(df):
     df.loc[(df['golden_cross_shifted'] == False) & (df['golden_cross'] == False), 'transition_golden_cross'] = '悪継続'
     df.loc[(df['golden_cross_shifted'] == True) & (df['golden_cross'] == True), 'transition_golden_cross'] = '良継続'
     df.loc[(df['golden_cross_shifted'] == True) & (df['golden_cross'] == False), 'transition_golden_cross'] = 'Dx発生'
+    df = df.drop('golden_cross_shifted', axis=1)
     return df
 
+def add_status_boolean_change(df, col_name):
+    df[f'{col_name}_shifted'] = df[col_name].shift()
+    df.loc[(df[f'golden_cross_shifted'] == False) & (df['golden_cross'] == True), 'transition_golden_cross'] = 'Gx好転'
+    df.loc[(df[f'golden_cross_shifted'] == False) & (df['golden_cross'] == False), 'transition_golden_cross'] = '悪継続'
+    df.loc[(df[f'golden_cross_shifted'] == True) & (df['golden_cross'] == True), 'transition_golden_cross'] = '良継続'
+    df.loc[(df[f'golden_cross_shifted'] == True) & (df['golden_cross'] == False), 'transition_golden_cross'] = 'Dx発生'
+    df = df.drop(f'golden_cross_shifted', axis=1)
 
-# 指数平滑移動平均計算
-def calc_ema(prices, period):
-    ema = np.zeros(len(prices))
-    ema[:] = np.nan  # NaN で初期化
-    ema[period - 1] = prices[:period].mean()  # 最初だけ単純移動平均
-    for d in range(period, len(prices)):
-        ema[d] = ema[d - 1] + (prices[d] - ema[d - 1]) / (period + 1) * 2
-    return ema
 
 
 # MACD 計算
-def calc_macd(prices, period_short, period_long, period_signal):
-    ema_short = calc_ema(prices, period_short)
-    ema_long = calc_ema(prices, period_long)
-    macd = ema_short - ema_long  # MACD = 短期移動平均 - 長期移動平均
-    signal = pd.Series(macd).rolling(period_signal).mean()  # シグナル = MACD の移動平均
-    hist = macd - signal
-    hist_rate = hist / prices
-    return macd, signal, hist, hist_rate
-
-
-def set_macd(df):
-    df['macd_line'], df['macd_signal'], df['macd_hist'], df['macd_hist_rate'] = calc_macd(df.Close, 12, 26, 9)
-    return df
+# def add_macd(df):
+#     ema12 = df['Close'].ewm(span=12, adjust=False).mean()
+#     ema26 = df['Close'].ewm(span=26, adjust=False).mean()
+#     macd = ema12 - ema26
+#     signal = macd.ewm(span=9, adjust=False).mean()
+#     hist = macd - signal
+#     macd_df = pd.DataFrame({'macd': macd, 'signal': signal, 'hist': hist})
+#     return pd.concat([df, macd_df], axis=1)
