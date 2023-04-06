@@ -9,7 +9,7 @@ trades_filename = 'nikkei_trades_20220301.csv'
 brands_filename = 'nikkei_listed_20230314_.csv'
 
 # pandasの表示設定
-pd.set_option('display.max_rows', 266)
+pd.set_option('display.max_rows', 267)
 pd.set_option('display.max_columns', 50)
 
 # トレードデータcsvの読み込みと初期加工
