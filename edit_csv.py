@@ -13,17 +13,21 @@ def edit(_df, df_date, brand_code):
     pd.set_option('display.max_rows', 267)
     pd.set_option('display.max_columns', 50)
     df = df.astype({'Close': float, 'High': float, 'Open': float, 'Low': float, 'Volume': float})
+    # print(brand_code)
+    df = standardization(df)
     df = add_golden_cross(df)
     df = add_macd(df)
     df = add_rsi(df)
     if 'macd_hist_positive' in df.columns and 'RSI_3MA_diff_positive' and 'golden_cross' in df.columns:
         df['signal_macd_rsi_positive'] = (df['macd_hist_positive'] & df['RSI_3MA_diff_positive'])
         df['signal_gd_macd_rsi_positive'] = (
-                    df['macd_hist_positive'] & df['RSI_3MA_diff_positive'] & df['golden_cross'])
+                df['macd_hist_positive'] & df['RSI_3MA_diff_positive'] & df['golden_cross'])
     df = add_stochastics(df)
-    mean_list = [3, 5, 7]
+    mean_list = [2,4,6]
     for i in mean_list:
-        df[f'mean_{str(i)}'] = (df['Close'].rolling(i).mean().shift(-(i - 1)) / df['Close']).round(2)
+        df[f'mean_{str(i)}'] = (df['Close'].rolling(i).mean().shift(-(i - 1)) / df['Close']).round(3)
+        df[f'positive_mean_{str(i)}'] = np.where(df[f'mean_{str(i)}'] > 1, True, False)
+        df = df[df[f'mean_{str(i)}'] != 1]
     df = df.drop(['Date', 'Volume', 'Open', 'High', 'Low'], axis=1)
     df = df.dropna()
     return df
@@ -119,4 +123,12 @@ def add_stochastics(df, n=9, d_n=3):
     # 不要なカラムを削除
     df = df.drop(['high_n', 'low_n'], axis=1)
 
+    return df
+
+
+def standardization(df):
+    # print(df['Close'])
+    rate = 3000 / df['Close'][2]
+    df[['Close', 'Open', 'High', 'Low']] = df[['Close', 'Open', 'High', 'Low']] * rate
+    # print(f'rate is {str(rate)}')
     return df
